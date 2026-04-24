@@ -553,14 +553,14 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
 <body>
 
 <!-- HERO -->
-<div class="hero-wrapper">
+<div class="hero-wrapper" id="hero-top">
   <div id="crt-frame"></div>
   <div class="hero-fade"></div>
   <div class="hero-fade-top"></div>
 
   <div id="hero-overlay">
     <nav class="nav">
-      <a class="nav-brand" href="#top">
+      <a class="nav-brand" href="#hero-top">
         <div class="nav-brand-dot"></div>
         <span class="nav-brand-text">{master_name}</span>
       </a>
@@ -1147,7 +1147,17 @@ document.addEventListener('DOMContentLoaded', function() {{
     mainNav.classList.toggle('scrolled', window.scrollY > 80);
   }}, {{ passive: true }});
 
-  // JS-driven smooth scroll for hash links (smoother than CSS alone on some browsers)
+  // Trigger .visible on .reveal elements currently in viewport
+  function triggerVisibleReveals() {{
+    document.querySelectorAll('.reveal:not(.visible)').forEach(el => {{
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {{
+        el.classList.add('visible');
+      }}
+    }});
+  }}
+
+  // Smooth scroll with reveal trigger on completion
   function smoothScrollTo(targetY, duration) {{
     const startY = window.scrollY;
     const diff = targetY - startY;
@@ -1157,7 +1167,12 @@ document.addEventListener('DOMContentLoaded', function() {{
       const elapsed = now - startTime;
       const p = Math.min(elapsed / duration, 1);
       window.scrollTo(0, startY + diff * ease(p));
-      if (p < 1) requestAnimationFrame(step);
+      if (p < 1) {{
+        requestAnimationFrame(step);
+      }} else {{
+        // Scroll finished — force-reveal anything now in view
+        triggerVisibleReveals();
+      }}
     }}
     requestAnimationFrame(step);
   }}
@@ -1176,11 +1191,20 @@ document.addEventListener('DOMContentLoaded', function() {{
     }});
   }});
 
-  // Scroll reveal
+  // Scroll reveal via IntersectionObserver (low threshold — fires as soon as pixel visible)
   const revealObs = new IntersectionObserver((entries) => {{
     entries.forEach(e => {{ if (e.isIntersecting) e.target.classList.add('visible'); }});
-  }}, {{ threshold: 0.12, rootMargin: '0px 0px -40px 0px' }});
+  }}, {{ threshold: 0.01, rootMargin: '0px' }});
   document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  // Also trigger reveals on manual scroll (throttled)
+  let scrollThrottle = false;
+  window.addEventListener('scroll', () => {{
+    if (!scrollThrottle) {{
+      scrollThrottle = true;
+      requestAnimationFrame(() => {{ triggerVisibleReveals(); scrollThrottle = false; }});
+    }}
+  }}, {{ passive: true }});
 
   // Entrance animation
   requestAnimationFrame(() => requestAnimationFrame(() => {{
