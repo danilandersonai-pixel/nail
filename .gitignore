@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Environments and secrets
+.env
+.venv
+venv/
+env/
+
+# Generator output (per-master sites)
+output/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Node (for the vary-science-lab-website-with-/ subfolder)
+node_modules/
+dist/
+.vite/
+
+# Test artifacts
+preview_test.html
