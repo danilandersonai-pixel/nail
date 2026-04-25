@@ -16,31 +16,40 @@ def _stars(rating: int) -> str:
 
 
 def _build_services_grid(items: list) -> str:
-    icons = [
-        '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
-        '<circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/>',
-        '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
-        '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>',
-        '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
-        '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
-    ]
+    fallback_emojis = ['💅', '✨', '🌸', '💎', '🪄', '🌿']
     delays = ['reveal-delay-1', 'reveal-delay-2', 'reveal-delay-3',
               'reveal-delay-4', 'reveal-delay-5', 'reveal-delay-6']
     cards = []
     for i, item in enumerate(items[:6]):
-        icon = icons[i % len(icons)]
         delay = delays[i % len(delays)]
         name = _esc(item.get('name', ''))
         desc = _esc(item.get('description', ''))
+        emoji = item.get('emoji', fallback_emojis[i % len(fallback_emojis)])
+        badge = '<div class="feature-badge">Популярное</div>' if i == 0 else ''
         cards.append(f'''
       <div class="feature-card reveal {delay}">
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24">{icon}</svg>
-        </div>
+        {badge}
+        <div class="feature-emoji">{emoji}</div>
         <div class="feature-title">{name}</div>
         <div class="feature-desc">{desc}</div>
       </div>''')
     return '\n'.join(cards)
+
+
+def _build_portfolio_grid(count: int = 6) -> str:
+    labels = ['Маникюр', 'Дизайн', 'Наращивание', 'Педикюр', 'Комплекс', 'Арт']
+    items = []
+    for i in range(count):
+        label = labels[i % len(labels)]
+        delay = f'reveal-delay-{(i % 6) + 1}'
+        items.append(f'''
+      <div class="portfolio-item reveal {delay}">
+        <div class="portfolio-placeholder">
+          <span class="portfolio-placeholder-icon">+</span>
+        </div>
+        <div class="portfolio-label">{label}</div>
+      </div>''')
+    return '\n'.join(items)
 
 
 def _build_prices_rows(items: list) -> str:
@@ -51,8 +60,9 @@ def _build_prices_rows(items: list) -> str:
         delay = delays[i % len(delays)]
         name = _esc(item.get('name', ''))
         price = _esc(item.get('price', ''))
+        featured_class = ' price-row--featured' if i == 0 else ''
         rows.append(f'''
-      <div class="price-row reveal {delay}">
+      <div class="price-row{featured_class} reveal {delay}">
         <span class="price-name">{name}</span>
         <span class="price-dots"></span>
         <span class="price-val">{price}</span>
@@ -62,6 +72,7 @@ def _build_prices_rows(items: list) -> str:
 
 def _build_reviews(items: list) -> str:
     delays = ['reveal-delay-1', 'reveal-delay-2', 'reveal-delay-3']
+    review_dates = ['Март 2026', 'Февраль 2026', 'Январь 2026']
     cards = []
     for i, item in enumerate(items[:3]):
         delay = delays[i % len(delays)]
@@ -70,13 +81,19 @@ def _build_reviews(items: list) -> str:
         service = _esc(item.get('service', ''))
         rating = item.get('rating', 5)
         stars = _stars(rating)
+        initial = name[0].upper() if name else '?'
+        date = review_dates[i % len(review_dates)]
         cards.append(f'''
       <div class="review-card reveal {delay}">
         <div class="review-stars">{stars}</div>
         <p class="review-text">{text}</p>
         <div class="review-footer">
-          <span class="review-name">{name}</span>
-          <span class="review-service">{service}</span>
+          <div class="review-avatar">{initial}</div>
+          <div class="review-meta">
+            <span class="review-name">{name}</span>
+            <span class="review-service">{service}</span>
+          </div>
+          <span class="review-date">{date}</span>
         </div>
       </div>''')
     return '\n'.join(cards)
@@ -130,6 +147,7 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     services_title = _esc(services.get('title', 'Услуги'))
     services_subtitle = _esc(services.get('subtitle', ''))
     services_grid = _build_services_grid(services.get('items', []))
+    portfolio_grid = _build_portfolio_grid(6)
 
     prices_title = _esc(prices.get('title', 'Прайс'))
     prices_subtitle = _esc(prices.get('subtitle', ''))
@@ -169,14 +187,16 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     }}
 
     * {{ margin: 0; padding: 0; box-sizing: border-box; outline: none !important; }}
-    html, body {{
-      width: 100%; height: 100%; overflow-x: hidden;
+    html {{
+      scroll-behavior: smooth;
+      overflow-x: clip;
+    }}
+    body {{
+      width: 100%; min-height: 100%; overflow-x: hidden;
       background: var(--bg);
       color: var(--text);
       font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
-    html {{ scroll-behavior: smooth; }}
-    body {{ overflow-y: auto; }}
 
     /* ===== 3D BACKGROUND ===== */
     #crt-frame {{
@@ -354,16 +374,6 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     }}
     .hero-fade.anim-in, .hero-fade-top.anim-in {{ opacity: 1; }}
     .nav-brand, .nav-links a, .nav-hamburger {{
-      opacity: 0; transform: translateY(-12px);
-      transition: opacity 0.6s cubic-bezier(0.25,0.1,0.25,1), transform 0.6s cubic-bezier(0.25,0.1,0.25,1);
-    }}
-    .nav-brand {{ transition-delay: 0.3s; }}
-    .nav-links a:nth-child(1) {{ transition-delay: 0.4s; }}
-    .nav-links a:nth-child(2) {{ transition-delay: 0.48s; }}
-    .nav-links a:nth-child(3) {{ transition-delay: 0.56s; }}
-    .nav-links a:nth-child(4) {{ transition-delay: 0.64s; }}
-    .nav-hamburger {{ transition-delay: 0.4s; }}
-    .nav-brand.anim-in, .nav-links a.anim-in, .nav-hamburger.anim-in {{
       opacity: 1; transform: translateY(0);
     }}
 
@@ -389,23 +399,40 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     /* About */
     .section-about {{ padding: 160px 48px 120px; }}
     .about-grid {{
-      display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
+      display: grid; grid-template-columns: 380px 1fr; gap: 80px; align-items: start;
     }}
+    .about-photo-placeholder {{
+      width: 100%; aspect-ratio: 3 / 4;
+      background: var(--bg-warm); border: 1px solid var(--border-strong);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 14px;
+      color: var(--text-faded); font-size: 11px;
+      letter-spacing: 2px; text-transform: uppercase;
+    }}
+    .about-photo-placeholder::before {{
+      content: ''; width: 52px; height: 52px;
+      border: 1px solid var(--border-strong); border-radius: 50%; display: block;
+    }}
+    .about-photo-placeholder::after {{ content: 'ФОТО МАСТЕРА'; }}
+    .about-right {{ display: flex; flex-direction: column; gap: 40px; }}
     .about-text {{
-      font-size: 16px; font-weight: 300; color: var(--text-muted);
-      line-height: 1.8;
+      font-size: 16px; font-weight: 300; color: var(--text-muted); line-height: 1.8;
     }}
-    .about-stats {{ display: flex; flex-direction: column; gap: 40px; }}
+    .about-stats {{
+      display: flex; flex-direction: row;
+      border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+    }}
     .about-stat {{
-      border-left: 1px solid var(--border-strong); padding-left: 24px;
+      flex: 1; padding: 24px 20px;
+      border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
     }}
     .about-stat-val {{
       font-family: 'Instrument Serif', Georgia, serif;
-      font-size: clamp(40px, 5vw, 64px); font-weight: 400;
+      font-size: clamp(32px, 4vw, 52px); font-weight: 400;
       color: var(--text); letter-spacing: -2px; line-height: 1;
     }}
     .about-stat-label {{
-      font-size: 12px; font-weight: 300; color: var(--text-faded);
+      font-size: 11px; font-weight: 300; color: var(--text-faded);
       text-transform: uppercase; letter-spacing: 1px; margin-top: 8px;
     }}
 
@@ -419,36 +446,62 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     .feature-card {{
       background: var(--bg-soft); padding: 48px 40px;
       display: flex; flex-direction: column; gap: 16px;
-      transition: background 0.35s ease;
+      transition: background 0.35s ease; position: relative;
     }}
     .feature-card:hover {{ background: var(--bg); }}
-    .feature-icon {{
-      width: 40px; height: 40px;
-      border: 1px solid var(--border-strong); border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
+    .feature-badge {{
+      position: absolute; top: 16px; right: 16px;
+      font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--accent); border: 1px solid var(--accent);
+      padding: 4px 10px; border-radius: 100px;
     }}
-    .feature-icon svg {{
-      width: 18px; height: 18px; stroke: var(--accent);
-      fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
-    }}
+    .feature-emoji {{ font-size: 32px; line-height: 1; margin-bottom: 4px; }}
     .feature-title {{ font-size: 16px; font-weight: 500; color: var(--text); }}
     .feature-desc {{ font-size: 13px; font-weight: 300; color: var(--text-muted); line-height: 1.7; }}
+
+    /* Portfolio (внутри секции Services) */
+    .portfolio-section-label {{
+      font-size: 10px; font-weight: 500; color: var(--text-ghost);
+      letter-spacing: 3px; text-transform: uppercase; margin: 72px 0 32px;
+    }}
+    .portfolio-grid {{
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    }}
+    .portfolio-item {{ display: flex; flex-direction: column; gap: 10px; }}
+    .portfolio-placeholder {{
+      aspect-ratio: 4 / 3; background: var(--bg-warm);
+      border: 1px solid var(--border-strong);
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }}
+    .portfolio-placeholder:hover {{ background: var(--bg); border-color: var(--accent); }}
+    .portfolio-placeholder-icon {{
+      font-size: 20px; color: var(--text-ghost); font-weight: 300; line-height: 1;
+    }}
+    .portfolio-label {{
+      font-size: 11px; font-weight: 400; color: var(--text-faded);
+      letter-spacing: 1px; text-transform: uppercase; text-align: center;
+    }}
 
     /* Prices */
     .section-prices {{ padding: 120px 48px; border-top: 1px solid var(--border); }}
     .prices-list {{ max-width: 720px; }}
     .price-row {{
       display: flex; align-items: baseline; gap: 12px;
-      padding: 16px 0; border-bottom: 1px solid var(--border);
+      padding: 20px 0; border-bottom: 1px solid var(--border);
     }}
+    .price-row--featured {{
+      padding: 24px 20px; margin: 0 -20px;
+      background: var(--bg-warm); border-bottom: 1px solid var(--border-strong);
+    }}
+    .price-row--featured .price-name {{ font-size: 16px; font-weight: 500; }}
+    .price-row--featured .price-val {{ font-size: 17px; font-weight: 600; }}
     .price-name {{ font-size: 15px; font-weight: 400; color: var(--text); white-space: nowrap; }}
     .price-dots {{
       flex: 1; border-bottom: 1px dashed var(--border-strong);
       margin-bottom: 4px; min-width: 32px;
     }}
-    .price-val {{
-      font-size: 15px; font-weight: 500; color: var(--accent); white-space: nowrap;
-    }}
+    .price-val {{ font-size: 15px; font-weight: 500; color: var(--accent); white-space: nowrap; }}
     .prices-note {{
       font-size: 12px; color: var(--text-faded); margin-top: 24px;
       font-style: italic; letter-spacing: 0.3px;
@@ -458,16 +511,28 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     .section-reviews {{ padding: 120px 48px; background: var(--bg-soft); border-top: 1px solid var(--border); }}
     .reviews-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }}
     .review-card {{
-      background: var(--bg); border: 1px solid var(--border); padding: 32px;
-      display: flex; flex-direction: column; gap: 16px;
+      background: var(--bg); border: 1px solid var(--border); padding: 36px 32px;
+      display: flex; flex-direction: column; gap: 20px;
       transition: border-color 0.35s ease, transform 0.35s ease;
     }}
-    .review-card:hover {{ border-color: var(--accent); transform: translateY(-2px); }}
-    .review-stars {{ font-size: 16px; color: var(--accent); letter-spacing: 2px; }}
-    .review-text {{ font-size: 13px; font-weight: 300; color: var(--text-muted); line-height: 1.8; flex: 1; }}
-    .review-footer {{ display: flex; flex-direction: column; gap: 4px; }}
+    .review-card:hover {{ border-color: var(--accent); transform: translateY(-3px); }}
+    .review-stars {{ font-size: 16px; color: var(--accent); letter-spacing: 3px; }}
+    .review-text {{ font-size: 14px; font-weight: 300; color: var(--text-muted); line-height: 1.85; flex: 1; }}
+    .review-footer {{
+      display: flex; align-items: center; gap: 12px;
+      border-top: 1px solid var(--border); padding-top: 16px;
+    }}
+    .review-avatar {{
+      width: 36px; height: 36px; flex-shrink: 0;
+      background: var(--bg-warm); border: 1px solid var(--border-strong);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 500; color: var(--accent);
+      font-family: 'Instrument Serif', Georgia, serif;
+    }}
+    .review-meta {{ display: flex; flex-direction: column; gap: 2px; flex: 1; }}
     .review-name {{ font-size: 13px; font-weight: 500; color: var(--text); }}
     .review-service {{ font-size: 11px; color: var(--text-faded); letter-spacing: 0.5px; text-transform: uppercase; }}
+    .review-date {{ font-size: 11px; color: var(--text-ghost); white-space: nowrap; }}
 
     /* Contact */
     .section-contact {{
@@ -538,7 +603,10 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
       .hero-bottom {{ padding: 16px 24px; }}
       .hero-stats {{ gap: 24px; }}
       .section-about {{ padding: 100px 24px 80px; }}
-      .about-grid {{ grid-template-columns: 1fr; gap: 48px; }}
+      .about-grid {{ grid-template-columns: 1fr; gap: 32px; }}
+      .about-photo-placeholder {{ aspect-ratio: 4 / 3; max-height: 260px; }}
+      .about-stats {{ flex-direction: column; }}
+      .portfolio-grid {{ grid-template-columns: repeat(2, 1fr); gap: 8px; }}
       .section-services {{ padding: 80px 24px; }}
       .features-grid {{ grid-template-columns: 1fr; }}
       .feature-card {{ padding: 32px 24px; }}
@@ -619,19 +687,22 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     <div class="section-label reveal">О мастере</div>
     <h2 class="section-heading reveal reveal-delay-1">{about_title}</h2>
     <div class="about-grid">
-      <p class="about-text reveal reveal-delay-2">{about_text}</p>
-      <div class="about-stats">
-        <div class="about-stat reveal reveal-delay-2">
-          <div class="about-stat-val">{exp_years}</div>
-          <div class="about-stat-label">{badge1_label}</div>
-        </div>
-        <div class="about-stat reveal reveal-delay-3">
-          <div class="about-stat-val">{clients_count}+</div>
-          <div class="about-stat-label">{badge2_label}</div>
-        </div>
-        <div class="about-stat reveal reveal-delay-4">
-          <div class="about-stat-val">{works_count}+</div>
-          <div class="about-stat-label">{badge3_label}</div>
+      <div class="about-photo-placeholder reveal reveal-delay-2"></div>
+      <div class="about-right">
+        <p class="about-text reveal reveal-delay-3">{about_text}</p>
+        <div class="about-stats">
+          <div class="about-stat reveal reveal-delay-3">
+            <div class="about-stat-val">{exp_years}</div>
+            <div class="about-stat-label">{badge1_label}</div>
+          </div>
+          <div class="about-stat reveal reveal-delay-4">
+            <div class="about-stat-val">{clients_count}+</div>
+            <div class="about-stat-label">{badge2_label}</div>
+          </div>
+          <div class="about-stat reveal reveal-delay-5">
+            <div class="about-stat-val">{works_count}+</div>
+            <div class="about-stat-label">{badge3_label}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -646,6 +717,10 @@ def build_html(business_info: dict, content: dict, theme_key: str = "1") -> str:
     <p class="section-sub reveal reveal-delay-2">{services_subtitle}</p>
     <div class="features-grid">
       {services_grid}
+    </div>
+    <div class="portfolio-section-label reveal" id="portfolio">Примеры работ</div>
+    <div class="portfolio-grid">
+      {portfolio_grid}
     </div>
   </div>
 </section>
@@ -1191,11 +1266,15 @@ document.addEventListener('DOMContentLoaded', function() {{
     }});
   }});
 
-  // Scroll reveal via IntersectionObserver (low threshold — fires as soon as pixel visible)
+  // Scroll reveal via IntersectionObserver — fires 150px before element enters viewport
   const revealObs = new IntersectionObserver((entries) => {{
     entries.forEach(e => {{ if (e.isIntersecting) e.target.classList.add('visible'); }});
-  }}, {{ threshold: 0.01, rootMargin: '0px' }});
+  }}, {{ threshold: 0.01, rootMargin: '150px 0px' }});
   document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  // Immediate reveal for elements visible on page load
+  triggerVisibleReveals();
+  setTimeout(triggerVisibleReveals, 400);
 
   // Also trigger reveals on manual scroll (throttled)
   let scrollThrottle = false;
